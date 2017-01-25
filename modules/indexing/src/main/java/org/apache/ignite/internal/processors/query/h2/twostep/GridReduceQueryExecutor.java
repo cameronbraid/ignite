@@ -1320,7 +1320,7 @@ public class GridReduceQueryExecutor {
         private final int pageSize;
 
         /** */
-        private final long start;
+        private final long startTime;
 
         /** */
         private final GridQueryCancel cancel;
@@ -1332,13 +1332,14 @@ public class GridReduceQueryExecutor {
          * @param conn Connection.
          * @param idxsCnt Number of indexes.
          * @param pageSize Page size.
-         * @param start Start time.
+         * @param startTime Start time.
+         * @param cancel Query cancel handler.
          */
-        private QueryRun(Connection conn, int idxsCnt, int pageSize, long start, GridQueryCancel cancel) {
+        private QueryRun(Connection conn, int idxsCnt, int pageSize, long startTime, GridQueryCancel cancel) {
             this.conn = (JdbcConnection)conn;
             this.idxs = new ArrayList<>(idxsCnt);
             this.pageSize = pageSize > 0 ? pageSize : GridCacheTwoStepQuery.DFLT_PAGE_SIZE;
-            this.start = start;
+            this.startTime = startTime;
             this.cancel = cancel;
         }
 
@@ -1372,6 +1373,20 @@ public class GridReduceQueryExecutor {
 
             for (GridMergeIndex idx : idxs) // Fail all merge indexes.
                 idx.fail(e);
+        }
+
+        /**
+         * @return Query duration.
+         */
+        long duration() {
+            return U.currentTimeMillis() - startTime;
+        }
+
+        /**
+         * Cancel query;
+         */
+        void cancel() {
+            cancel.cancel();
         }
     }
 

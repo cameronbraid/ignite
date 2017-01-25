@@ -3147,8 +3147,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<String> longRunningQueries(long duration) {
-        return null;
+    @Override public Collection<IgniteBiTuple<UUID, String>> longRunningQueries(long duration) {
+        return null; // TODO IGNITE-4436
+    }
+
+    /** {@inheritDoc} */
+    @Override public void cancelQueries(Collection<UUID> queries) {
+        // TODO IGNITE-4436
     }
 
     /** {@inheritDoc} */

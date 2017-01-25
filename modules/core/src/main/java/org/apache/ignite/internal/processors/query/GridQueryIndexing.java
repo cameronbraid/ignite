@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -244,7 +245,12 @@ public interface GridQueryIndexing {
      * @param duration Duration to check.
      * @return Collection of long running queries.
      */
-    public Collection<String> longRunningQueries(long duration);
+    public Collection<IgniteBiTuple<UUID, String>> longRunningQueries(long duration);
+
+    /**
+     *
+     */
+    public void cancelQueries(Collection<UUID> queries);
 
     /**
      * Cancels all executing queries.
