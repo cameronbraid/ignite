@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtPartit
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
+import org.apache.ignite.internal.processors.query.GridQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -497,7 +498,10 @@ public class GridReduceQueryExecutor {
 
             final String space = cctx.name();
 
-            final QueryRun r = new QueryRun(h2.connectionForSpace(space), qry.mapQueries().size(), qry.pageSize(),
+            final QueryRun r = new QueryRun(UUID.randomUUID(),
+                F.isEmpty(qry.mapQueries()) ? "" : qry.mapQueries().get(0).query(),
+                F.first(qry.schemas()),
+                h2.connectionForSpace(space), qry.mapQueries().size(), qry.pageSize(),
                 System.currentTimeMillis(), cancel);
 
             AffinityTopologyVersion topVer = h2.readyTopologyVersion();
@@ -1304,9 +1308,43 @@ public class GridReduceQueryExecutor {
     }
 
     /**
+     * Collect queries that already running more than specified duration.
+     *
+     * @param duration Duration to check.
+     * @return Collection of IDs and statements of long running queries.
+     */
+    public Collection<GridQuery> longRunningQueries(long duration) {
+        Collection<GridQuery> res = new ArrayList<>();
+
+        long curTime = U.currentTimeMillis();
+
+        for (QueryRun run : runs.values()) {
+            if (curTime - run.startTime > duration)
+                res.add(run.qry);
+        }
+
+        return res;
+    }
+
+    /**
+     * Cancel specified queries.
+     *
+     * @param queries Queries IDs to cancel.
+     */
+    public void cancelQueries(Set<UUID> queries) {
+        for (QueryRun run : runs.values()) {
+            if (queries.contains(run.qry.id()))
+                run.cancel.cancel();
+        }
+    }
+
+    /**
      * Query run.
      */
     private static class QueryRun {
+        /** */
+        private final GridQuery qry;
+
         /** */
         private final List<GridMergeIndex> idxs;
 
@@ -1329,13 +1367,17 @@ public class GridReduceQueryExecutor {
         private final AtomicReference<Object> state = new AtomicReference<>();
 
         /**
+         * @param id Query ID.
+         * @param qry Query text.
+         * @param cache Cache where query was executed.
          * @param conn Connection.
          * @param idxsCnt Number of indexes.
          * @param pageSize Page size.
          * @param startTime Start time.
          * @param cancel Query cancel handler.
          */
-        private QueryRun(Connection conn, int idxsCnt, int pageSize, long startTime, GridQueryCancel cancel) {
+        private QueryRun(UUID id, String qry, String cache, Connection conn, int idxsCnt, int pageSize, long startTime, GridQueryCancel cancel) {
+            this.qry = new GridQuery(id, qry, cache);
             this.conn = (JdbcConnection)conn;
             this.idxs = new ArrayList<>(idxsCnt);
             this.pageSize = pageSize > 0 ? pageSize : GridCacheTwoStepQuery.DFLT_PAGE_SIZE;
@@ -1373,20 +1415,6 @@ public class GridReduceQueryExecutor {
 
             for (GridMergeIndex idx : idxs) // Fail all merge indexes.
                 idx.fail(e);
-        }
-
-        /**
-         * @return Query duration.
-         */
-        long duration() {
-            return U.currentTimeMillis() - startTime;
-        }
-
-        /**
-         * Cancel query;
-         */
-        void cancel() {
-            cancel.cancel();
         }
     }
 

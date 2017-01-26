@@ -48,6 +48,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -81,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.query.GridQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.query.GridQueryFieldsResult;
@@ -3147,13 +3149,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<IgniteBiTuple<UUID, String>> longRunningQueries(long duration) {
-        return null; // TODO IGNITE-4436
+    @Override public Collection<GridQuery> longRunningQueries(long duration) {
+        return rdcQryExec.longRunningQueries(duration);
     }
 
     /** {@inheritDoc} */
-    @Override public void cancelQueries(Collection<UUID> queries) {
-        // TODO IGNITE-4436
+    @Override public void cancelQueries(Set<UUID> queries) {
+        rdcQryExec.cancelQueries(queries);
     }
 
     /** {@inheritDoc} */

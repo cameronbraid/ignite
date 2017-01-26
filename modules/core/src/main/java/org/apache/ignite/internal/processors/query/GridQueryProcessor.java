@@ -659,6 +659,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * @return Indexing.
+     */
+    public GridQueryIndexing indexing() {
+        return idx;
+    }
+
+    /**
      * @param space Space name.
      * @return Cache object context.
      */
