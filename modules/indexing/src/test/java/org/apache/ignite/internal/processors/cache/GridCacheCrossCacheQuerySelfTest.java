@@ -270,15 +270,15 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
 
         Thread.sleep(1000);
 
-        GridQueryIndexing idx = ((IgniteKernal)ignite).context().query().indexing();
+        GridQueryProcessor qryProc = ((IgniteKernal)ignite).context().query();
 
-        Collection<GridQuery> queries = idx.runningQueries(500);
+        Collection<GridQuery> queries = qryProc.runningQueries(500);
 
         assertEquals(1, queries.size());
 
         fut.get();
 
-        queries = idx.runningQueries(500);
+        queries = qryProc.runningQueries(500);
 
         assertEquals(0, queries.size());
     }
@@ -304,24 +304,24 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
 
         Thread.sleep(1000);
 
-        GridQueryIndexing idx = ((IgniteKernal)ignite).context().query().indexing();
+        GridQueryProcessor queryProc = ((IgniteKernal)ignite).context().query();
 
-        Collection<GridQuery> queries = idx.runningQueries(500);
+        Collection<GridQuery> queries = queryProc.runningQueries(500);
 
         assertEquals(1, queries.size());
 
         for (GridQuery query : queries)
-            idx.cancelQueries(Collections.singleton(query.id()));
+            queryProc.cancelQueries(Collections.singleton(query.id()));
 
         Thread.sleep(2000); // Give cluster some time to cancel query and cleanup resources.
 
-        queries = idx.runningQueries(500);
+        queries = queryProc.runningQueries(500);
 
         assertEquals(0, queries.size());
 
         fut.get();
 
-        queries = idx.runningQueries(500);
+        queries = queryProc.runningQueries(500);
 
         assertEquals(0, queries.size());
     }

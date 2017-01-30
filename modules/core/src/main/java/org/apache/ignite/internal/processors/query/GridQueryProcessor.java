@@ -659,13 +659,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @return Indexing.
-     */
-    public GridQueryIndexing indexing() {
-        return idx;
-    }
-
-    /**
      * @param space Space name.
      * @return Cache object context.
      */
@@ -949,16 +942,21 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param duration Duration to check.
      * @return Collection of long running queries.
      */
-    public Collection<String> longRunningQueries(long duration) {
-        Collection<String> res = new ArrayList<>();
+    public Collection<GridQuery> runningQueries(long duration) {
+        if (moduleEnabled())
+            return idx.runningQueries(duration);
 
-        if (moduleEnabled()) {
-            idx.runningQueries(duration);
+        return Collections.emptyList();
+    }
 
-            res.add("Query");
-        }
-
-        return res;
+    /**
+     * Cancel specified queries.
+     *
+     * @param queries Queries ID's to cancel.
+     */
+    public void cancelQueries(Set<UUID> queries) {
+        if (moduleEnabled())
+            idx.cancelQueries(queries);
     }
 
     /**

@@ -61,7 +61,7 @@ public class VisorCancelQueriesTask extends VisorMultiNodeTask<Set<UUID>, Void, 
 
         /** {@inheritDoc} */
         @Override protected Void run(@Nullable Set<UUID> queries) throws IgniteException {
-            ignite.context().query().indexing().cancelQueries(queries);
+            ignite.context().query().cancelQueries(queries);
 
             return null;
         }
