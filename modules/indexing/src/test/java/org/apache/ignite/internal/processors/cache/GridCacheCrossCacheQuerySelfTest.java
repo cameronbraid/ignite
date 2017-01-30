@@ -60,9 +60,13 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
     /** */
     private Ignite ignite;
 
-    /***/
+    /**
+     * Utility class with custom SQL functions.
+     */
     public static class TestSQLFunctions {
         /**
+         * Sleep function to simulate long running queries.
+         *
          * @param x Time to sleep.
          * @return Return specified argument.
          */
@@ -264,17 +268,60 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
             }
         }, 1);
 
-        Thread.sleep(100);
+        Thread.sleep(1000);
 
         GridQueryIndexing idx = ((IgniteKernal)ignite).context().query().indexing();
 
-        Collection<GridQuery> queries = idx.runningQueries(50);
+        Collection<GridQuery> queries = idx.runningQueries(500);
 
         assertEquals(1, queries.size());
 
         fut.get();
 
-        queries = idx.runningQueries(50);
+        queries = idx.runningQueries(500);
+
+        assertEquals(0, queries.size());
+    }
+
+    /**
+     * Test collecting info about running.
+     *
+     * @throws Exception If failed.
+     */
+    public void testCancelingQueries() throws Exception {
+        IgniteInternalFuture<?> fut = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                try {
+                    SqlFieldsQuery qry = new SqlFieldsQuery("select productId, sleep(500) from FactPurchase limit 100");
+
+                    ignite.cache("partitioned").query(qry).getAll();
+                }
+                catch (Throwable e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 1);
+
+        Thread.sleep(1000);
+
+        GridQueryIndexing idx = ((IgniteKernal)ignite).context().query().indexing();
+
+        Collection<GridQuery> queries = idx.runningQueries(500);
+
+        assertEquals(1, queries.size());
+
+        for (GridQuery query : queries)
+            idx.cancelQueries(Collections.singleton(query.id()));
+
+        Thread.sleep(2000); // Give cluster some time to cancel query and cleanup resources.
+
+        queries = idx.runningQueries(500);
+
+        assertEquals(0, queries.size());
+
+        fut.get();
+
+        queries = idx.runningQueries(500);
 
         assertEquals(0, queries.size());
     }
