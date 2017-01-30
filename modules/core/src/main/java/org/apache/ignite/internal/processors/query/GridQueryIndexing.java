@@ -246,7 +246,7 @@ public interface GridQueryIndexing {
      * @param duration Duration to check.
      * @return Collection of long running queries.
      */
-    public Collection<GridQuery> longRunningQueries(long duration);
+    public Collection<GridQuery> runningQueries(long duration);
 
     /**
      * Cancel specified queries.

@@ -3149,7 +3149,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<GridQuery> longRunningQueries(long duration) {
+    @Override public Collection<GridQuery> runningQueries(long duration) {
         return rdcQryExec.longRunningQueries(duration);
     }
 

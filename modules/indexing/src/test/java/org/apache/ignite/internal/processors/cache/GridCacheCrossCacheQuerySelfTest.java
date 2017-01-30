@@ -18,6 +18,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -29,11 +30,16 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.processors.query.GridQuery;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -53,6 +59,26 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
 
     /** */
     private Ignite ignite;
+
+    /***/
+    public static class TestSQLFunctions {
+        /**
+         * @param x Time to sleep.
+         * @return Return specified argument.
+         */
+        @QuerySqlFunction
+        public static long sleep(long x) {
+            if (x >= 0)
+                try {
+                    Thread.sleep(x);
+                }
+                catch (InterruptedException ignored) {
+                    // No-op.
+                }
+
+            return x;
+        }
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -112,6 +138,8 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
             );
         else
             throw new IllegalStateException("mode: " + mode);
+
+        cc.setSqlFunctionClasses(TestSQLFunctions.class);
 
         return cc;
     }
@@ -215,6 +243,40 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
         }
 
         assertEquals(3, top);
+    }
+
+    /**
+     * Test collecting info about running.
+     *
+     * @throws Exception If failed.
+     */
+    public void testRunningQueries() throws Exception {
+        IgniteInternalFuture<?> fut = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                try {
+                    SqlFieldsQuery qry = new SqlFieldsQuery("select productId, sleep(3000) from FactPurchase limit 1");
+
+                    ignite.cache("partitioned").query(qry).getAll();
+                }
+                catch (Throwable e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 1);
+
+        Thread.sleep(100);
+
+        GridQueryIndexing idx = ((IgniteKernal)ignite).context().query().indexing();
+
+        Collection<GridQuery> queries = idx.runningQueries(50);
+
+        assertEquals(1, queries.size());
+
+        fut.get();
+
+        queries = idx.runningQueries(50);
+
+        assertEquals(0, queries.size());
     }
 
     /**

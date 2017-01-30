@@ -953,7 +953,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         Collection<String> res = new ArrayList<>();
 
         if (moduleEnabled()) {
-            idx.longRunningQueries(duration);
+            idx.runningQueries(duration);
 
             res.add("Query");
         }
