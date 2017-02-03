@@ -30,7 +30,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
@@ -38,8 +37,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
-import org.apache.ignite.internal.processors.query.GridQuery;
-import org.apache.ignite.internal.processors.query.GridQueryIndexing;
+import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -272,7 +270,7 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
 
         GridQueryProcessor qryProc = ((IgniteKernal)ignite).context().query();
 
-        Collection<GridQuery> queries = qryProc.runningQueries(500);
+        Collection<GridRunningQueryInfo> queries = qryProc.runningQueries(500);
 
         assertEquals(1, queries.size());
 
@@ -306,11 +304,11 @@ public class GridCacheCrossCacheQuerySelfTest extends GridCommonAbstractTest {
 
         GridQueryProcessor queryProc = ((IgniteKernal)ignite).context().query();
 
-        Collection<GridQuery> queries = queryProc.runningQueries(500);
+        Collection<GridRunningQueryInfo> queries = queryProc.runningQueries(500);
 
         assertEquals(1, queries.size());
 
-        for (GridQuery query : queries)
+        for (GridRunningQueryInfo query : queries)
             queryProc.cancelQueries(Collections.singleton(query.id()));
 
         Thread.sleep(2000); // Give cluster some time to cancel query and cleanup resources.

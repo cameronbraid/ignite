@@ -18,7 +18,6 @@
 package org.apache.ignite.internal.visor.query;
 
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * Arguments for {@link VisorQueryTask}.
@@ -28,7 +27,7 @@ public class VisorQuery implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private UUID id;
+    private Long id;
 
     /** Query text. */
     private String qry;
@@ -41,7 +40,7 @@ public class VisorQuery implements Serializable {
      * @param qry Query text.
      * @param cache Cache where query was executed.
      */
-    public VisorQuery(UUID id, String qry, String cache) {
+    public VisorQuery(Long id, String qry, String cache) {
         this.id = id;
         this.qry = qry;
         this.cache = cache;
@@ -50,7 +49,7 @@ public class VisorQuery implements Serializable {
     /**
      * @return Query ID.
      */
-    public UUID id() {
+    public Long id() {
         return id;
     }
 

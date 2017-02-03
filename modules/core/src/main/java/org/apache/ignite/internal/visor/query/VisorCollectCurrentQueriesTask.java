@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
-import org.apache.ignite.internal.processors.query.GridQuery;
+import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
@@ -74,11 +74,11 @@ public class VisorCollectCurrentQueriesTask extends VisorMultiNodeTask<Long, Map
 
         /** {@inheritDoc} */
         @Override protected Collection<VisorQuery> run(@Nullable Long duration) throws IgniteException {
-            Collection<GridQuery> queries = ignite.context().query().runningQueries(duration);
+            Collection<GridRunningQueryInfo> queries = ignite.context().query().runningQueries(duration);
 
             Collection<VisorQuery> res = new ArrayList<>(queries.size());
 
-            for (GridQuery qry : queries)
+            for (GridRunningQueryInfo qry : queries)
                 res.add(new VisorQuery(qry.id(), qry.query(), qry.cache()));
 
             return res;

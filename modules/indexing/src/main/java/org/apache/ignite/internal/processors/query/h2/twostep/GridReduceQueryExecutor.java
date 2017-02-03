@@ -62,7 +62,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtPartit
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
-import org.apache.ignite.internal.processors.query.GridQuery;
+import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -121,7 +121,7 @@ public class GridReduceQueryExecutor {
     private IgniteLogger log;
 
     /** */
-    private final AtomicLong reqIdGen = new AtomicLong();
+    private final AtomicLong qryIdGen;
 
     /** */
     private final ConcurrentMap<Long, QueryRun> runs = new ConcurrentHashMap8<>();
@@ -168,9 +168,11 @@ public class GridReduceQueryExecutor {
     };
 
     /**
+     * @param qryIdGen Query ID generator.
      * @param busyLock Busy lock.
      */
-    public GridReduceQueryExecutor(GridSpinBusyLock busyLock) {
+    public GridReduceQueryExecutor(AtomicLong qryIdGen, GridSpinBusyLock busyLock) {
+        this.qryIdGen = qryIdGen;
         this.busyLock = busyLock;
     }
 
@@ -494,13 +496,11 @@ public class GridReduceQueryExecutor {
                 }
             }
 
-            final long qryReqId = reqIdGen.incrementAndGet();
+            final long qryReqId = qryIdGen.incrementAndGet();
 
             final String space = cctx.name();
 
-            final QueryRun r = new QueryRun(UUID.randomUUID(),
-                F.isEmpty(qry.mapQueries()) ? "" : qry.mapQueries().get(0).query(),
-                F.first(qry.schemas()),
+            final QueryRun r = new QueryRun(qryReqId, qry.originalSql(), space,
                 h2.connectionForSpace(space), qry.mapQueries().size(), qry.pageSize(),
                 System.currentTimeMillis(), cancel);
 
@@ -1313,13 +1313,13 @@ public class GridReduceQueryExecutor {
      * @param duration Duration to check.
      * @return Collection of IDs and statements of long running queries.
      */
-    public Collection<GridQuery> longRunningQueries(long duration) {
-        Collection<GridQuery> res = new ArrayList<>();
+    public Collection<GridRunningQueryInfo> longRunningQueries(long duration) {
+        Collection<GridRunningQueryInfo> res = new ArrayList<>();
 
         long curTime = U.currentTimeMillis();
 
         for (QueryRun run : runs.values()) {
-            if (curTime - run.startTime > duration)
+            if (run.qry.longQuery(curTime, duration))
                 res.add(run.qry);
         }
 
@@ -1331,10 +1331,10 @@ public class GridReduceQueryExecutor {
      *
      * @param queries Queries IDs to cancel.
      */
-    public void cancelQueries(Set<UUID> queries) {
+    public void cancelQueries(Set<Long> queries) {
         for (QueryRun run : runs.values()) {
             if (queries.contains(run.qry.id()))
-                run.cancel.cancel();
+                run.qry.cancel();
         }
     }
 
@@ -1343,7 +1343,7 @@ public class GridReduceQueryExecutor {
      */
     private static class QueryRun {
         /** */
-        private final GridQuery qry;
+        private final GridRunningQueryInfo qry;
 
         /** */
         private final List<GridMergeIndex> idxs;
@@ -1356,12 +1356,6 @@ public class GridReduceQueryExecutor {
 
         /** */
         private final int pageSize;
-
-        /** */
-        private final long startTime;
-
-        /** */
-        private final GridQueryCancel cancel;
 
         /** Can be either CacheException in case of error or AffinityTopologyVersion to retry if needed. */
         private final AtomicReference<Object> state = new AtomicReference<>();
@@ -1376,13 +1370,11 @@ public class GridReduceQueryExecutor {
          * @param startTime Start time.
          * @param cancel Query cancel handler.
          */
-        private QueryRun(UUID id, String qry, String cache, Connection conn, int idxsCnt, int pageSize, long startTime, GridQueryCancel cancel) {
-            this.qry = new GridQuery(id, qry, cache);
+        private QueryRun(Long id, String qry, String cache, Connection conn, int idxsCnt, int pageSize, long startTime, GridQueryCancel cancel) {
+            this.qry = new GridRunningQueryInfo(id, qry, cache, startTime, cancel);
             this.conn = (JdbcConnection)conn;
             this.idxs = new ArrayList<>(idxsCnt);
             this.pageSize = pageSize > 0 ? pageSize : GridCacheTwoStepQuery.DFLT_PAGE_SIZE;
-            this.startTime = startTime;
-            this.cancel = cancel;
         }
 
         /**

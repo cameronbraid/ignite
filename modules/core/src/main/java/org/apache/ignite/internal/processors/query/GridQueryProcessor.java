@@ -942,7 +942,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param duration Duration to check.
      * @return Collection of long running queries.
      */
-    public Collection<GridQuery> runningQueries(long duration) {
+    public Collection<GridRunningQueryInfo> runningQueries(long duration) {
         if (moduleEnabled())
             return idx.runningQueries(duration);
 
@@ -954,7 +954,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      *
      * @param queries Queries ID's to cancel.
      */
-    public void cancelQueries(Set<UUID> queries) {
+    public void cancelQueries(Set<Long> queries) {
         if (moduleEnabled())
             idx.cancelQueries(queries);
     }

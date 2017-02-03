@@ -17,50 +17,82 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.util.UUID;
-
 /**
  * Query descriptor.
  */
-public class GridQuery {
+public class GridRunningQueryInfo {
     /** */
-    private UUID id;
+    private final long id;
 
     /** */
-    private String qry;
+    private final String qry;
 
     /** */
-    private String cache;
+    private final String cache;
+
+    /** */
+    private final long startTime;
+
+    /** */
+    private final GridQueryCancel cancel;
 
     /**
      * @param id Query ID.
      * @param qry Query text.
      * @param cache Cache where query was executed.
+     * @param startTime Query start time.
+     * @param cancel Query cancel.
      */
-    public GridQuery(UUID id, String qry, String cache) {
+    public GridRunningQueryInfo(Long id, String qry, String cache, long startTime, GridQueryCancel cancel) {
         this.id = id;
         this.qry = qry;
         this.cache = cache;
+        this.startTime = startTime;
+        this.cancel = cancel;
     }
 
     /**
-     * @return Id.
+     * @return Query ID.
      */
-    public UUID id() {
+    public Long id() {
         return id;
     }
 
     /**
-     * @return Query.
+     * @return Query text.
      */
     public String query() {
         return qry;
     }
 
     /**
-     * @return Cache.
+     * @return Cache where query was executed.
      */
     public String cache() {
         return cache;
+    }
+
+    /**
+     * @return Query start time.
+     */
+    public long startTime() {
+        return startTime;
+    }
+
+    /**
+     * @param curTime Current time.
+     * @param duration Duration of long query.
+     * @return {@code true} if this query should be considered as long running query.
+     */
+    public boolean longQuery(long curTime, long duration) {
+        return curTime - startTime > duration;
+    }
+
+    /**
+     * Cancel query.
+     */
+    public void cancel() {
+        if (cancel != null)
+            cancel.cancel();
     }
 }
