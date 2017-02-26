@@ -20,6 +20,8 @@ package org.apache.ignite.cache.hibernate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -97,7 +99,7 @@ public class HibernateRegionFactory implements RegionFactory {
     private final Map<String, String> regionCaches = new HashMap<>();
 
     /** Map needed to provide the same transaction context for different regions. */
-    private final ThreadLocal threadLoc = new ThreadLocal();
+    private ConcurrentMap<String, ThreadLocal> threadLocMap = new ConcurrentHashMap<>();
 
     /** {@inheritDoc} */
     @Override public void start(Settings settings, Properties props) throws CacheException {
@@ -205,7 +207,7 @@ public class HibernateRegionFactory implements RegionFactory {
      * @return Thread local instance used to track updates done during one Hibernate transaction.
      */
     ThreadLocal threadLocalForCache(String cacheName) {
-        return threadLoc;
+        return threadLocMap.computeIfAbsent(cacheName, (k)->new ThreadLocal());;
     }
 
     /**
